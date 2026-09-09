@@ -192,7 +192,7 @@ pub fn sha256_file(path: &Path) -> io::Result<[u8; 32]> {
 /// between concatenated resources.
 pub fn sha256_named_files(entries: &[(&str, &Path)]) -> io::Result<[u8; 32]> {
     let mut state = Sha256::new();
-    state.update(b"phase-tools:named-files:v1\0");
+    state.update(b"opentargetcalls:named-files:v1\0");
 
     for (label, path) in entries {
         let label_bytes = label.as_bytes();
@@ -262,6 +262,14 @@ mod tests {
         state.update(b"b");
         state.update(b"c");
         assert_eq!(state.finalize(), sha256_bytes(b"abc"));
+    }
+
+    #[test]
+    fn named_file_digest_has_a_versioned_domain() {
+        assert_eq!(
+            to_hex(&sha256_named_files(&[]).unwrap()),
+            "cfcf88b9667d1d61a17ee6c5bdbab98dccdada8b2895c7c0d3958032fdc95831"
+        );
     }
 
     #[test]

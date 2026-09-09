@@ -8,9 +8,9 @@ use std::fmt;
 use std::fs;
 use std::path::Path;
 
-pub const CERTIFICATE_SCHEMA: &str = "phase-tools-certificate-v1";
+pub const CERTIFICATE_SCHEMA: &str = "opentargetcalls-certificate-v1";
 pub const REGISTRY_VERSION: &str = "dragen-4.5-plus-hla-kir-v1";
-pub const PROOF_CONTRACT: &str = "PhaseTools.Certificate.V2";
+pub const PROOF_CONTRACT: &str = "OpenTargetCalls.Certificate.V2";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct SelectionWitness {

@@ -1,121 +1,94 @@
 # OpenTargetCalls
 
-> **Open, vendor-independent targeted calling for difficult genomic loci.**
+![OpenTargetCalls — difficult loci, open by design](docs/assets/opentargetcalls-banner.svg)
 
-The project aims to call medically relevant loci from short-read WGS and
-supported WES assays, with explicit no-calls when evidence is insufficient.
-Instrument vendor is not an eligibility restriction; analytical accuracy must
-be validated per platform, chemistry, library, assay and target.
+[![Build](https://github.com/sounkou-bioinfo/OpenTargetCalls/actions/workflows/build.yml/badge.svg)](https://github.com/sounkou-bioinfo/OpenTargetCalls/actions/workflows/build.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-52bfa3)](LICENSE)
+[![Status: early development](https://img.shields.io/badge/status-early_development-e6b85c)](docs/roadmap.md)
 
-The current package is `phase_tools-rs` and its executable is `phase-tools`.
-The toolbox is available as the [v0.1.0 source release](https://github.com/sounkou-bioinfo/phase_tools-rs/releases/tag/v0.1.0).
-OpenTargetCalls development does not preserve toolbox commands or compatibility
-aliases. Native alignment I/O and empirical calibration are planned, not implemented.
-See [the Rust workspace design](docs/architecture.md), [I/O contract](docs/io.md)
-and [empirical error model](docs/error-model.md). The [mapchk source assessment](docs/research/mapchk.md)
-explains Heng Li's SBX error measurements with executable synthetic fixtures.
+**Open, vendor-independent targeted calling for medically relevant difficult loci.**
 
-## Closed target scope
+Instrument vendor is not an eligibility restriction. The goal is independent
+short-read WGS and supported WES analysis across sequencing platforms, with
+explicit uncertainty and no-calls when evidence cannot support a result.
 
-The registry is finite. It contains HLA and KIR through the
-[Unum](https://github.com/fg-labs/unum) Rust port of T1K, plus every target in
-the Illumina DRAGEN v4.5 Targeted Caller set.
+> **Research software.** The registry, Unum HLA/KIR adapter and prepared-evidence
+> HBA scoring kernel are runnable. Native alignment I/O, empirical calibration
+> and analytical validation remain planned. File compatibility does not establish
+> accuracy for an instrument, chemistry, assay or target.
 
-| Target | WGS | WES | Current backend | State |
-|---|---:|---:|---|---|
-| HLA | yes | capture-dependent | Unum/T1K lane | runnable |
-| KIR | yes | capture-dependent | Unum/T1K lane | runnable |
-| CYP2B6 | yes | no | native paralog lane | contract only |
-| CYP2D6 | yes | no | native paralog lane | contract only |
-| CYP21A2 | yes | no | native paralog lane | contract only |
-| GBA | yes | no | native paralog lane | contract only |
-| HBA | yes | validated enrichment only | native integer solver | solver kernel |
-| LPA | yes | no | native repeat-CN lane | contract only |
-| RH | yes | no | native blood-group/paralog lane | contract only |
-| SMN | yes | validated enrichment only | native paralog lane | contract only |
+[Architecture](docs/architecture.md) · [I/O design](docs/io.md) ·
+[Error models](docs/error-model.md) · [Roadmap](docs/roadmap.md) ·
+[Lean and assurance](docs/certificates.md)
 
-“Closed” means that target-dependent code must exhaust this enum and the Lean
-proof checks the same finite set. It does **not** mean that unfinished callers
-are represented as finished. A `contract-only` target cannot issue a valid
-`called` certificate.
+## Start here
 
-The WES entries are observability contracts, not marketing labels. HBA and SMN
-require a declared, validated target-enrichment profile. Every target still has
-read/depth/evidence quality gates after this assay-level check.
-
-## Two algorithmic lanes
-
-### 1. HLA/KIR allele typing
-
-`phase-tools unum` executes the maintained Unum backend without a shell. Unum
-owns candidate-read extraction, allele k-mers, banded alignment, abundance
-estimation, and allele inference. This repository owns:
-
-- the HLA/KIR-only backend boundary;
-- WGS/WES observability declarations;
-- input, resource, and result hashes;
-- normalized call cardinality;
-- a decision record with metadata consistency checks.
-
-This avoids copying the T1K port into a second codebase. Direct `unum-core`
-embedding should wait for a stable end-to-end library API; the current
-high-level driver lives in the Unum binary crate.
-
-### 2. Copy-number/paralog/repeat targets
-
-The native lane consumes typed evidence rather than pretending all loci share
-one pileup caller. Its evidence vocabulary includes unique and total depth,
-paralog-differentiating sites, junction reads, small variants, repeat-spanning
-reads, and phase links.
-
-The first executable kernel is HBA hypothesis selection. It takes a versioned,
-resource-defined hypothesis catalogue and integer-valued evidence. Candidate
-penalties are computed as:
-
-```text
-prior_penalty
-  + sum(ceil(abs(observed - expected) / tolerance) * weight)
-```
-
-The unique minimum must beat the runner-up by the requested margin. Otherwise
-the result is an explicit no-call. Integer arithmetic makes the exact decision
-portable and suitable for deterministic tests and mathematical specification. Feature extraction,
-normalization, population hypothesis resources, and analytical validation are
-still separate work; the synthetic example is not a clinical HBA resource.
-
-## Build and test
+Rust 1.85 or newer is required. The current package has no runtime crate
+dependencies; native HTS dependencies belong to the planned I/O implementation.
 
 ```bash
-make test
-make proof
-make release
+git clone https://github.com/sounkou-bioinfo/OpenTargetCalls.git
+cd OpenTargetCalls
+cargo build --locked --release
+./target/release/opentargetcalls targets
 ```
 
-Lean is pinned in `lean-toolchain`; the current Rust package has no runtime
-crate dependencies. Planned I/O dependencies are described in the design.
+The Rust package, library and executable are all named `opentargetcalls`.
+`make install` installs the executable under `~/.local/bin` by default.
 
-## Inspect the target contract
+## What runs today
+
+| Target | WGS contract | WES contract | Implementation |
+|---|---|---|---|
+| HLA, KIR | observable | capture-dependent | external Unum adapter |
+| HBA | observable | validated enrichment | prepared-evidence scoring kernel |
+| SMN | observable | validated enrichment | registry only |
+| CYP2B6, CYP2D6, CYP21A2, GBA | observable | not observable | registry only |
+| LPA, RH | observable | not observable | registry only |
+
+The finite registry covers the DRAGEN v4.5 targeted-caller set plus HLA and KIR.
+These are assay contracts, not completed-caller or clinical-performance claims.
+Read-level support, resource completeness and target-specific validation remain
+separate requirements. See [the target scope](docs/scope.md).
 
 ```bash
-cargo run -- targets
 cargo run -- targets --assay wes
 cargo run -- targets --assay wes --validated-enrichment
 ```
 
-## Run the synthetic HBA solver example
+### HBA: inspect the scoring kernel
+
+The kernel selects from a supplied hypothesis catalogue using integer penalties:
+
+```text
+prior_penalty + sum(ceil(abs(observed - expected) / tolerance) * weight)
+```
+
+A unique minimum must satisfy the requested runner-up margin; otherwise the
+result is a no-call. This is a deterministic heuristic, not a calibrated
+likelihood or an end-to-end HBA caller.
 
 ```bash
+work=$(mktemp -d)
 cargo run -- hba \
   --assay wgs \
   --evidence examples/hba/evidence.synthetic.tsv \
   --hypotheses examples/hba/hypotheses.synthetic.tsv \
   --min-margin 10 \
-  --certificate /tmp/hba.cert
+  --certificate "$work/hba.cert"
 
-cargo run -- verify --certificate /tmp/hba.cert
+cargo run -- verify --certificate "$work/hba.cert"
+rm -r "$work"
 ```
 
-## Run HLA/KIR through Unum
+The example resources are synthetic. `verify` checks metadata consistency;
+it does not reopen hashed artifacts or rerun inference.
+
+### HLA/KIR: use an external backend
+
+[Unum](https://github.com/fg-labs/unum) owns read extraction and allele inference.
+OpenTargetCalls owns assay declarations, result normalization and provenance.
+Install Unum and its appropriate reference resources separately.
 
 ```bash
 cargo run -- unum \
@@ -131,22 +104,50 @@ cargo run -- unum \
   --certificate results/sample.hla.cert
 ```
 
-KIR uses the same command with a KIR reference. Resource construction and
-versioning remain Unum responsibilities.
+KIR uses the same command with KIR reference resources. Backend execution is not
+an independent truth-set validation.
 
-## Lean research and decision records
+## Where the implementation is heading
 
-Lean specifies registry, assay and decision-state properties for research and
-future paper models. The current proofs establish properties of that Lean
-model, including the stated winner/margin inequality. They do not establish
-Rust equivalence, recompute evidence, or prove the winner's optimality over
-actual candidate scores.
+```text
+qualified BAM/CRAM + reference + declared run/assay metadata
+                            ↓
+             explicit observations and error counts
+                            ↓
+          frozen empirical models with support checks
+                            ↓
+        target-specific evidence, likelihoods and no-calls
+```
 
-The current `--certificate` and `verify` commands check supplied metadata
-fields. `verify` does not reopen the hashed artifacts or rerun inference.
-Hashes describe identity, not biological validity or authenticity. Calibration,
-independent truth and implementation correspondence require separate evidence.
+The [workspace design](docs/architecture.md) separates `otc-core`, `otc-io` and
+the CLI. It starts with a qualified HTSlib backend and keeps sequencing errors,
+indels/repeat lengths, mapping uncertainty and copy-number depth distinct.
+The workspace split and native readers are not yet implemented.
 
-See [the architecture](docs/architecture.md),
-[the closed scope](docs/scope.md), [the roadmap](docs/roadmap.md), and
-[the assurance boundary](docs/certificates.md).
+The [mapchk source study](docs/research/mapchk.md) traces Heng Li's SBX empirical
+error statistic to pinned C source and executable synthetic fixtures. It is a
+method characterization, not reproduction of the Roche accuracy curves.
+
+## Tests and research models
+
+```bash
+make test       # Rust unit and CLI tests
+make lint       # Clippy
+make smoke      # registry and synthetic HBA CLI workflow
+make proof      # Lean models; toolchain pinned in lean-toolchain
+```
+
+Lean lives under `OpenTargetCalls/` for paper formalizations and model
+justification. Its current proofs concern a separate mathematical model, not
+Rust equivalence or biological validity. Hashes, metadata consistency,
+mathematical proofs and empirical validation are distinct forms of evidence.
+See [the assurance boundary](docs/certificates.md).
+
+## License and citation
+
+MIT; see [LICENSE](LICENSE). Cite this repository and the target-specific methods
+used by a run; metadata is in [CITATION.cff](CITATION.cff).
+
+For the independent toolbox distribution, build the frozen
+[v0.1.0 source release](https://github.com/sounkou-bioinfo/OpenTargetCalls/releases/tag/v0.1.0).
+OpenTargetCalls defines its own API without toolbox compatibility aliases.

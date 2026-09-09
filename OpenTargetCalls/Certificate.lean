@@ -1,6 +1,6 @@
-import PhaseTools.Registry
+import OpenTargetCalls.Registry
 
-namespace PhaseTools
+namespace OpenTargetCalls
 
 inductive NoCallReason where
   | assayNotObservable
@@ -218,4 +218,4 @@ theorem verified_margin (witness : SelectionWitness)
     witness.winnerPenalty + witness.requiredMargin ≤ witness.runnerUpPenalty := by
   exact (verifySelection_sound witness verified).2.2
 
-end PhaseTools
+end OpenTargetCalls

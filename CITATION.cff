@@ -1,11 +1,10 @@
 cff-version: 1.2.0
 message: "Please cite this repository and the target-specific methods used by a run."
-title: "phase_tools-rs: proof-carrying difficult-locus callers"
+title: "OpenTargetCalls: vendor-independent targeted calling for difficult genomic loci"
 type: software
 authors:
   - family-names: "Touré"
     given-names: "Sounkou"
-repository-code: "https://github.com/sounkou-bioinfo/phase_tools-rs"
+repository-code: "https://github.com/sounkou-bioinfo/OpenTargetCalls"
 license: MIT
 version: 0.2.0
-date-released: 2026-09-03

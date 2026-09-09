@@ -1,24 +1,24 @@
 [package]
-name = "phase_tools-rs"
+name = "opentargetcalls"
 version = "0.2.0"
 edition = "2021"
 rust-version = "1.85"
 license = "MIT"
 description = "Vendor-independent short-read targeted calling for difficult genomic loci"
-repository = "https://github.com/sounkou-bioinfo/phase_tools-rs"
-homepage = "https://github.com/sounkou-bioinfo/phase_tools-rs"
-documentation = "https://github.com/sounkou-bioinfo/phase_tools-rs#readme"
+repository = "https://github.com/sounkou-bioinfo/OpenTargetCalls"
+homepage = "https://github.com/sounkou-bioinfo/OpenTargetCalls"
+documentation = "https://github.com/sounkou-bioinfo/OpenTargetCalls#readme"
 readme = "README.md"
 build = false
 autobins = false
 
 [lib]
-name = "phase_tools"
+name = "opentargetcalls"
 path = "src/lib.rs"
 
 [[bin]]
-name = "phase-tools"
-path = "src/bin/phase_tools.rs"
+name = "opentargetcalls"
+path = "src/bin/opentargetcalls.rs"
 
 [dependencies]
 
