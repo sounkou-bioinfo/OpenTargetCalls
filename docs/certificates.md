@@ -1,8 +1,9 @@
-# Formal assurance and decision certificates
+# Decision records and Lean assurance boundary
 
 ## Certificate format
 
-Certificates are canonical `key=value` records. Version 1 binds:
+The CLI calls these artifacts certificates. They are canonical `key=value`
+decision records. Version 1 records:
 
 - target and assay declaration;
 - target-enrichment declaration;
@@ -20,7 +21,11 @@ winner_index < candidate_count
 winner_penalty + required_margin <= runner_up_penalty
 ```
 
-A called HBA result must have exactly one call and a valid witness.
+A called HBA result must have exactly one call and a structurally accepted
+witness. These checks do not recompute candidate scores or establish that the
+supplied winner and runner-up correspond to actual hypotheses. The Rust
+`verify` command checks supplied digest syntax without opening the input,
+resource or output artifacts. It does not authenticate the record.
 
 ## Exact decision-state contract
 
@@ -84,12 +89,12 @@ The current trusted boundary includes:
 - the evidence extractor or Unum backend;
 - assay/sample provenance.
 
-The proofs do not establish biological completeness or clinical validity.
-They prevent a narrower but important class of errors: silently calling outside
-the assay contract, claiming an unimplemented target, accepting a wrong backend
-or no-call reason, accepting an out-of-range winner, accepting an insufficient
-selection margin, or confusing zero calls with a called result.
+The proofs establish these properties in the Lean model, not equivalence to
+Rust execution. They do not establish biological completeness, clinical
+validity, or that a witness was derived from the claimed artifacts.
 
-Future hardening should generate Rust and Lean target definitions from one
-small declarative source and formally verify the integer HBA scoring fold, not
-only its emitted winner witness.
+Lean is retained for future papers and model justification. Useful research
+obligations include exact scoring/reduction laws, probability bounds and
+abstention conditions under explicit assumptions. Connecting those results to
+Rust requires a separate tested or proved implementation correspondence;
+connecting the model to biology requires independent empirical validation.

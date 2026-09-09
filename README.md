@@ -1,15 +1,17 @@
-# phase_tools-rs
+# OpenTargetCalls
 
-`phase_tools-rs` is being reduced to one job:
+> **Open, vendor-independent targeted calling for difficult genomic loci.**
 
-> **Call medically relevant difficult loci from short-read WGS/WES, emit an
-> explicit no-call when the assay cannot support the claim, and attach a
-> machine-checkable decision certificate.**
+The project aims to call medically relevant loci from short-read WGS and
+supported WES assays, with explicit no-calls when evidence is insufficient.
+Instrument vendor is not an eligibility restriction; analytical accuracy must
+be validated per platform, chemistry, library, assay and target.
 
-The old public collection of MNV, phasing, contamination, ancestry, BAM error
-model, and assembly commands is removed from the build. Useful phasing and
-assembly code may return later only as private evidence kernels for a target
-caller.
+The current package is `phase_tools-rs` and its executable is `phase-tools`.
+Native alignment I/O and empirical calibration are planned, not implemented.
+See [the Rust workspace design](docs/architecture.md), [I/O contract](docs/io.md)
+and [empirical error model](docs/error-model.md). The [mapchk source assessment](docs/research/mapchk.md)
+explains Heng Li's SBX error measurements with executable synthetic fixtures.
 
 ## Closed target scope
 
@@ -17,7 +19,7 @@ The registry is finite. It contains HLA and KIR through the
 [Unum](https://github.com/fg-labs/unum) Rust port of T1K, plus every target in
 the Illumina DRAGEN v4.5 Targeted Caller set.
 
-| Target | WGS | WES | Backend in this refocus | State |
+| Target | WGS | WES | Current backend | State |
 |---|---:|---:|---|---|
 | HLA | yes | capture-dependent | Unum/T1K lane | runnable |
 | KIR | yes | capture-dependent | Unum/T1K lane | runnable |
@@ -51,7 +53,7 @@ estimation, and allele inference. This repository owns:
 - WGS/WES observability declarations;
 - input, resource, and result hashes;
 - normalized call cardinality;
-- the proof-carrying certificate.
+- a decision record with metadata consistency checks.
 
 This avoids copying the T1K port into a second codebase. Direct `unum-core`
 embedding should wait for a stable end-to-end library API; the current
@@ -75,7 +77,7 @@ prior_penalty
 
 The unique minimum must beat the runner-up by the requested margin. Otherwise
 the result is an explicit no-call. Integer arithmetic makes the exact decision
-portable and suitable for certificate verification. Feature extraction,
+portable and suitable for deterministic tests and mathematical specification. Feature extraction,
 normalization, population hypothesis resources, and analytical validation are
 still separate work; the synthetic example is not a clinical HBA resource.
 
@@ -87,8 +89,8 @@ make proof
 make release
 ```
 
-Lean is pinned in `lean-toolchain`; Rust has no runtime crate dependencies in
-this refocus slice.
+Lean is pinned in `lean-toolchain`; the current Rust package has no runtime
+crate dependencies. Planned I/O dependencies are described in the design.
 
 ## Inspect the target contract
 
@@ -130,19 +132,19 @@ cargo run -- unum \
 KIR uses the same command with a KIR reference. Resource construction and
 versioning remain Unum responsibilities.
 
-## What a Lean certificate proves
+## Lean research and decision records
 
-The Lean project proves the finite target closure, the DRAGEN-v4.5 targeted
-subset, the HBA/SMN WES-enrichment rule, call/no-call cardinality, and soundness
-of the HBA winner/margin witness. Rust verifies the corresponding certificate
-fields before writing them.
+Lean specifies registry, assay and decision-state properties for research and
+future paper models. The current proofs establish properties of that Lean
+model, including the stated winner/margin inequality. They do not establish
+Rust equivalence, recompute evidence, or prove the winner's optimality over
+actual candidate scores.
 
-A certificate proves that a result follows the declared deterministic contract
-for content-addressed inputs and resources. It cannot prove that the reads came
-from the stated patient, that the assay was unbiased, that a resource catalogue
-is biologically complete, or that the caller is clinically accurate. Those
-claims require sample provenance, truth data, calibration, and validation.
+The current `--certificate` and `verify` commands check supplied metadata
+fields. `verify` does not reopen the hashed artifacts or rerun inference.
+Hashes describe identity, not biological validity or authenticity. Calibration,
+independent truth and implementation correspondence require separate evidence.
 
 See [the architecture](docs/architecture.md),
-[the closed scope](docs/scope.md), and
-[the formal assurance boundary](docs/certificates.md).
+[the closed scope](docs/scope.md), [the roadmap](docs/roadmap.md), and
+[the assurance boundary](docs/certificates.md).
