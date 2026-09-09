@@ -1,70 +1,199 @@
-# phase_tools-rs architecture
+# OpenTargetCalls architecture
 
-`phase_tools-rs` is being organized as a library-first Rust genomics package.
-The binaries remain important user-facing entry points, but new algorithms and
-shared I/O should live in the `phase_tools` library crate before being exposed
-through CLI wrappers.
+## Mission and implementation status
 
-## Target shape
+OpenTargetCalls is an independent, vendor-neutral targeted-calling project for
+short-read WGS and supported WES assays. Its scope is the DRAGEN v4.5 targeted
+loci plus HLA and KIR. Instrument vendor is not an eligibility gate. Analytical
+validation is specific to instrument, chemistry, library preparation, assay,
+aligner, reference and target; accepting a file does not establish accuracy.
+
+The executable currently consists of the `phase_tools` library and `phase-tools`
+CLI: a target registry, an Unum HLA/KIR adapter, an HBA prepared-evidence solver,
+and decision-record checks. Native alignment I/O and empirical calibration are
+not implemented. The structure below is the implementation design, not a list
+of available APIs. GitHub, package and executable renames are separate release
+operations.
+
+## Language decision
+
+Use **Rust for application code, evidence extraction and statistical kernels**.
+Keep a narrow adapter to established native libraries where that avoids
+reimplementing file-format or numerical semantics. Start alignment I/O with
+`rust-htslib`/HTSlib; qualify a pure-Rust backend before promoting it.
+
+Rust's ownership and type system suit reusable read buffers, bounded parallel
+workers, coordinate distinctions and explicit missing-data states. It does not
+make a statistical model correct or eliminate unsafe code inside dependencies.
+C would simplify direct HTSlib integration and a public C ABI, but would put
+buffer lifetime and concurrency safety on this project. Neither a C ABI nor a
+C-only deployment is currently required. A wholesale rewrite has no demonstrated
+benefit for the existing Rust kernels.
+
+The trade-off is a Rust toolchain plus native HTSlib build dependencies. Preserve
+an offline-buildable dependency lock and an audited native feature set. Profile
+before adding SIMD or custom allocation. See [the source assessment and I/O
+qualification plan](io.md#backend-decision).
+
+## Crate structure
+
+Use a workspace with three crates, introduced with working code and tests:
 
 ```text
-src/lib.rs
-src/assembly/          local assembly and assembly-backed adjudication
-src/io/                FASTA/VCF/BAM/CRAM/TSV helpers
-src/variant/           alleles, genotypes, phase tags, normalization helpers
-src/phase/             read-backed phasing, read selection, MEC/greedy kernels
-src/mnv/               MNV/COMPLEX construction and output helpers
-src/qc/                BAM/CRAM error, contamination, and ancestry kernels
-src/mrjd.rs            initial multi-region joint-detection kernels
-src/commands/          CLI adapters around library functions
-src/bin/               minimal binary entry points
+Cargo.toml                         workspace and shared build settings
+crates/
+  otc-core/                        no filesystem, processes or HTS dependencies
+    src/
+      lib.rs
+      coordinates.rs               assembly-bound intervals and event positions
+      observation.rs               backend-independent read/event views
+      calibration/                 counts, fitting and frozen model evaluation
+      evidence/                    target-specific sufficient statistics
+      targets/                     registry and target-specific inference
+      decision.rs                  calls, no-calls and evidence support
+  otc-io/                          HTS and resource format boundaries
+    src/
+      lib.rs
+      alignment.rs                 reader/header/query ownership
+      reference.rs                 indexed reference identity and fetching
+      htslib.rs                    initial alignment backend
+      resources.rs                 versioned resources and model serialization
+      output.rs                    structured results and run manifests
+  opentargetcalls/                  binary, not a second algorithm library
+    src/
+      main.rs
+      pipeline.rs                  planning, budgets and stage orchestration
+      backends/unum.rs             external process boundary
+PhaseTools.lean
+PhaseTools/                        Lean models for research
+examples/
+tests/fixtures/                    licensed, bounded, reproducible fixtures
+benches/                           decode, accumulation and end-to-end workloads
+docs/
 ```
 
-The first library boundaries are now in place for fermi-lite assembly, FASTA
-reference access, and VCF/BCF output-index policy:
+Dependency direction:
 
 ```text
-phase_tools::assembly::fermi_lite
-phase_tools::io::fasta
-phase_tools::io::vcf
-phase_tools::mrjd
+opentargetcalls --> otc-io --> otc-core
+       |______________________^
 ```
 
-`fermi_lite_assemble` and `phase_adjudicate` call the assembly module instead
-of path-including assembly code. `phase_mnv_rs`, `phase_adjudicate`,
-`bam_error_model`, `bam_contamination`, and `bam_ancestry` share the FASTA/FAI
-wrapper instead of each owning a separate htslib `faidx` wrapper.
-`phase_mnv_rs` uses `phase_tools::io::vcf` for output format inference,
-self-index policy resolution, and htslib-backed VCF/BCF index creation.
-`multi_region_joint_detect` now delegates candidate scanning plus TSV and
-plain diagnostic VCF formatting to `phase_tools::mrjd`; the binary is primarily
-argument parsing, path validation, and file/stdout wiring.
+`otc-core` defines observation and decision types; `otc-io` implements readers
+that supply them. Core models consume typed observations or sufficient
+statistics, never HTSlib/seqair records or filesystem paths. Model fitting can
+therefore be tested without a reader, and readers can be qualified without a
+caller. This is the reason for three crates rather than one crate per target
+or one undifferentiated executable.
 
-## Refactor rules
+Each crate owns its unit tests; integration fixtures live with the consuming
+crate, using shared fixture data only where needed. End-to-end CLI tests belong
+to `opentargetcalls`. No crate depends on the executable. Targets remain modules
+until an independent consumer or dependency boundary justifies a split.
 
-1. Keep behavior-preserving extraction separate from feature changes.
-2. Move duplicated primitives into the library before adding new binary options.
-3. Keep `rust-htslib` as the only htslib access path in Rust code.
-4. Preserve CLI output formats and test fixtures while moving internals.
-5. Expose narrow, typed kernels first; keep CLI parsing and printing at the
-   command boundary.
-6. Avoid adding dependencies unless they materially improve a reusable library
-   module.
+Application Rust remains safe Rust. The core forbids `unsafe`. The initial I/O
+adapter uses the safe `rust-htslib` interface; any future local unsafe kernel
+requires an isolated boundary, explicit lifetime/length contracts, scalar oracle
+and independent review. Native dependencies remain outside Rust's safety proof.
 
-## Immediate extraction sequence
+### Migration boundaries
 
-1. Shared error/result helpers.
-2. Continue moving VCF/BCF output, genotype, `PS`, and `HP` helpers into
-   `phase_tools::io::vcf` / `phase_tools::variant`.
-3. BAM record filtering and base/event extraction.
-4. `phase_compare` comparison kernel.
-5. BAM phasing read collection, read selection, MEC, and greedy kernels.
-6. MNV/COMPLEX observation collection, construction, and writing.
-7. BAM/CRAM QC kernels for error, contamination, and ancestry tools.
+- `src/model.rs`, `src/registry.rs` and the pure part of `src/hba.rs` become core
+  types and target modules.
+- HBA TSV parsing/writing moves to `otc-io`; the scoring function stays pure.
+- `src/unum.rs` is split between CLI process orchestration, I/O output parsing
+  and core normalized results. Backend failures remain errors.
+- Decision-record serialization, resource hashes and artifact loading belong
+  to I/O; semantic decision checks belong to core.
+- Preserve existing command behavior during the workspace move. Package/bin
+  naming, schema changes and backend qualification have explicit tests and
+  release notes; workspace restructuring does not certify any new target.
 
-## Current caveats
+Do not create empty crates or speculative public traits. The first workspace
+change must migrate a working core and add a minimal reader fixture.
 
-The main `phase_mnv_rs` implementation still contains most phasing and MNV logic
-in `src/main.rs`. That is intentional during the transition: extraction should
-be incremental and validated after each step rather than a large rewrite that
-changes behavior and architecture at the same time.
+## Pipeline
+
+```text
+alignment + reference + assay/run metadata + versioned resources
+                              |
+                   validate and plan intervals
+                              |
+             +----------------+-----------------+
+             |                                  |
+   calibration controls                  target/homolog regions
+             |                                  |
+   raw counts + held-out split          raw target observations
+             |                                  |
+   fit and validate frozen model -------------->|
+                                                |
+                         target-specific evidence and likelihoods
+                                                |
+                           inference and calibrated decision gates
+                                                |
+                      calls / typed no-calls + manifest + diagnostics
+```
+
+The initial implementation uses two logical stages: fit on controls, then apply
+a frozen model to target evidence. The physical scans may be separate indexed
+queries. A supplied compatible model skips fitting. See [empirical error
+modeling](error-model.md) for training assumptions, abstention and validation.
+
+Reuse one decoding pass for consumers only when their interval, ordering,
+filter and retained-state requirements agree. A permissive read stream can feed
+separate calibration and evidence filters; counts remain independently
+queryable and tested. HLA/KIR extraction remains owned by Unum until its library
+interface and semantics justify embedding. No shared scan is claimed across
+that external process boundary.
+
+The first implementation may reread target intervals after fitting. This costs
+I/O but avoids an unbounded read cache and prevents scoring early reads with a
+different model from late reads. Retain raw sufficient statistics only where
+they are sufficient for the eventual likelihood. A base-error lookup cannot
+be retroactively applied to a depth-only total.
+
+## Policies and reproducibility
+
+- **Coordinates:** internal zero-based half-open intervals tied to a reference
+  identity. File-specific conversions occur at I/O boundaries.
+- **Read versus fragment:** the observation unit, overlap handling, duplicate
+  policy and supplementary-alignment use are declared per metric.
+- **Missingness:** zero evidence, unavailable data, incompatible calibration,
+  biological ambiguity and software failure are distinct states.
+- **Workers:** independent reader handles; bounded queues and tile ownership;
+  one global budget for decode, compute and subprocess threads.
+- **Reductions:** checked integer counts merge exactly. Fitting and floating
+  inference use a fixed order with declared tolerances. Thread-count changes
+  must not silently alter a call near a decision threshold.
+- **Resources:** reference, controls, masks, hypotheses and model parameters
+  have schema versions, content identities and derivation metadata.
+- **Outputs:** expose evidence counts, effective support, rejected observations,
+  model support and decision reasons separately. A software or format error is
+  not an `insufficient-evidence` no-call.
+
+## Lean and paper models
+
+Keep Lean as a research specification and proof environment. Priority theorems
+are count/reduction laws, probability bounds, scoring definitions, abstention
+conditions and selection under stated assumptions. A paper must distinguish:
+
+1. the mathematical model and its assumptions;
+2. a theorem about that model;
+3. the tested or proved connection to executable Rust;
+4. empirical support on independent biological data.
+
+The present decision-record checks are metadata consistency checks. They do not
+recompute evidence or prove Rust/Lean equivalence. A content hash records
+identity, not truth or authentication. See [the assurance boundary](certificates.md).
+
+## Delivery order
+
+1. Qualify I/O and reference semantics on small adversarial fixtures.
+2. Collect inspectable calibration counts and fit a conservative baseline.
+3. Validate model generalization across held-out loci, samples and runs.
+4. Add HBA evidence extraction and evaluate depth and paralog likelihoods.
+5. Extend targets after a target-specific validation gate.
+
+Detailed acceptance criteria are in [the roadmap](roadmap.md). Mapping FASTQ to
+whole-genome alignments, a new BAM/CRAM codec, and generic public utility
+commands are outside this initial implementation.
