@@ -8,7 +8,9 @@ Instrument vendor is not an eligibility restriction; analytical accuracy must
 be validated per platform, chemistry, library, assay and target.
 
 The current package is `phase_tools-rs` and its executable is `phase-tools`.
-Native alignment I/O and empirical calibration are planned, not implemented.
+The toolbox is available as the [v0.1.0 source release](https://github.com/sounkou-bioinfo/phase_tools-rs/releases/tag/v0.1.0).
+OpenTargetCalls development does not preserve toolbox commands or compatibility
+aliases. Native alignment I/O and empirical calibration are planned, not implemented.
 See [the Rust workspace design](docs/architecture.md), [I/O contract](docs/io.md)
 and [empirical error model](docs/error-model.md). The [mapchk source assessment](docs/research/mapchk.md)
 explains Heng Li's SBX error measurements with executable synthetic fixtures.

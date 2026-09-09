@@ -8,8 +8,9 @@ HBA scoring kernel. Every milestone below requires executable acceptance tests.
 
 - Introduce `otc-core`, `otc-io` and `opentargetcalls` with the dependency
   boundaries in [the architecture](architecture.md).
-- Preserve current CLI behavior in integration tests while moving pure scoring
-  away from parsing and process execution.
+- Test the OpenTargetCalls API directly, with pure scoring separated from
+  parsing and process execution. No compatibility CLI or schema layer is
+  required; toolbox users build the frozen source release.
 - Pin and build the first `rust-htslib` backend with an explicit feature set.
 - Validate reference, sample/read-group selection and indexed BAM/CRAM queries.
 - Emit normalized base/event observations and inspectable integer counters.

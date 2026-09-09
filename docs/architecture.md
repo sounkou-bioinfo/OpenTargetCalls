@@ -105,9 +105,11 @@ and independent review. Native dependencies remain outside Rust's safety proof.
   and core normalized results. Backend failures remain errors.
 - Decision-record serialization, resource hashes and artifact loading belong
   to I/O; semantic decision checks belong to core.
-- Preserve existing command behavior during the workspace move. Package/bin
-  naming, schema changes and backend qualification have explicit tests and
-  release notes; workspace restructuring does not certify any new target.
+- Define the `opentargetcalls` command and result contracts on their own merits.
+  Command names, options, schemas and internal APIs may break compatibility;
+  compatibility aliases and preservation of toolbox behavior are out of scope.
+  Reuse kernels only where they satisfy the new evidence/model contracts.
+  Workspace restructuring does not certify any new target.
 
 Do not create empty crates or speculative public traits. The first workspace
 change must migrate a working core and add a minimal reader fixture.
