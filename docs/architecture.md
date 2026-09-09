@@ -8,12 +8,11 @@ loci plus HLA and KIR. Instrument vendor is not an eligibility gate. Analytical
 validation is specific to instrument, chemistry, library preparation, assay,
 aligner, reference and target; accepting a file does not establish accuracy.
 
-The executable currently consists of the `phase_tools` library and `phase-tools`
-CLI: a target registry, an Unum HLA/KIR adapter, an HBA prepared-evidence solver,
-and decision-record checks. Native alignment I/O and empirical calibration are
-not implemented. The structure below is the implementation design, not a list
-of available APIs. GitHub, package and executable renames are separate release
-operations.
+The `opentargetcalls` package provides a library and CLI: a target registry,
+an Unum HLA/KIR adapter, an HBA prepared-evidence solver, and decision-record
+checks. Native alignment I/O and empirical calibration are not implemented.
+The workspace structure below is the implementation design, not a list of
+available crates or APIs.
 
 ## Language decision
 
@@ -64,8 +63,8 @@ crates/
       main.rs
       pipeline.rs                  planning, budgets and stage orchestration
       backends/unum.rs             external process boundary
-PhaseTools.lean
-PhaseTools/                        Lean models for research
+OpenTargetCalls.lean
+OpenTargetCalls/                   Lean models for research
 examples/
 tests/fixtures/                    licensed, bounded, reproducible fixtures
 benches/                           decode, accumulation and end-to-end workloads

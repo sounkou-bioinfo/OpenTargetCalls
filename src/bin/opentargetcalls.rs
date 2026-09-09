@@ -1,13 +1,13 @@
-use phase_tools::certificate::{
+use opentargetcalls::certificate::{
     DecisionCertificate, SelectionWitness, PROOF_CONTRACT, REGISTRY_VERSION,
 };
-use phase_tools::digest::{sha256_bytes, sha256_file, to_hex};
-use phase_tools::hba::{
+use opentargetcalls::digest::{sha256_bytes, sha256_file, to_hex};
+use opentargetcalls::hba::{
     read_evidence, read_hypotheses, select_hba, HbaDecision, HbaHypothesis, HbaOutcome,
 };
-use phase_tools::model::{AssayKind, AssayProfile, CallStatus, NoCallReason, Target};
-use phase_tools::registry::{require_observable, spec, TARGET_SPECS};
-use phase_tools::unum::{run_unum, UnumBamMode, UnumRequest};
+use opentargetcalls::model::{AssayKind, AssayProfile, CallStatus, NoCallReason, Target};
+use opentargetcalls::registry::{require_observable, spec, TARGET_SPECS};
+use opentargetcalls::unum::{run_unum, UnumBamMode, UnumRequest};
 use std::collections::{BTreeMap, BTreeSet};
 use std::env;
 use std::path::{Path, PathBuf};
@@ -15,7 +15,7 @@ use std::str::FromStr;
 
 fn main() {
     if let Err(error) = run() {
-        eprintln!("phase-tools: {error}");
+        eprintln!("opentargetcalls: {error}");
         std::process::exit(2);
     }
 }
@@ -41,10 +41,12 @@ fn run() -> Result<(), String> {
             Ok(())
         }
         "version" | "--version" | "-V" => {
-            println!("phase-tools {}", env!("CARGO_PKG_VERSION"));
+            println!("opentargetcalls {}", env!("CARGO_PKG_VERSION"));
             Ok(())
         }
-        _ => Err(format!("unknown command '{command}'; run phase-tools help")),
+        _ => Err(format!(
+            "unknown command '{command}'; run opentargetcalls help"
+        )),
     }
 }
 
@@ -335,10 +337,10 @@ fn command_verify(arguments: &[String]) -> Result<(), String> {
 fn command_proof_contract() {
     println!("registry={REGISTRY_VERSION}");
     println!("proof_contract={PROOF_CONTRACT}");
-    println!("lean_registry_theorem=PhaseTools.mem_allTargets");
-    println!("lean_dragen_closure_theorem=PhaseTools.dragen45_closed");
-    println!("lean_wes_theorem=PhaseTools.dragen45_wes_iff");
-    println!("lean_selection_theorem=PhaseTools.verifySelection_sound");
+    println!("lean_registry_theorem=OpenTargetCalls.mem_allTargets");
+    println!("lean_dragen_closure_theorem=OpenTargetCalls.dragen45_closed");
+    println!("lean_wes_theorem=OpenTargetCalls.dragen45_wes_iff");
+    println!("lean_selection_theorem=OpenTargetCalls.verifySelection_sound");
 }
 
 fn validate_and_write_certificate(
@@ -456,19 +458,19 @@ impl Options {
 
 fn print_help() {
     println!(
-        r#"phase-tools: proof-carrying short-read callers for difficult loci
+        r#"OpenTargetCalls: vendor-independent targeted calling for difficult loci
 
 USAGE
-  phase-tools targets [--assay wgs|wes] [--validated-enrichment]
+  opentargetcalls targets [--assay wgs|wes] [--validated-enrichment]
 
-  phase-tools hba
+  opentargetcalls hba
     --assay wgs|wes [--validated-enrichment]
     --evidence FILE
     --hypotheses FILE
     [--min-margin INTEGER]
     --certificate FILE
 
-  phase-tools unum
+  opentargetcalls unum
     --target HLA|KIR
     --assay wgs|wes [--validated-enrichment]
     --unum PATH
@@ -481,13 +483,13 @@ USAGE
     [--threads INTEGER]
     --certificate FILE
 
-  phase-tools verify --certificate FILE
-  phase-tools proof-contract
+  opentargetcalls verify --certificate FILE
+  opentargetcalls proof-contract
 
-The HBA command consumes prepared integer evidence and a versioned hypothesis
-catalogue. The Unum command delegates HLA/KIR allele inference to the maintained
-Rust T1K port while this tool owns observability, hashing, normalized call
-cardinality, and the decision certificate.
+Research software. HBA scores prepared integer evidence; Unum delegates HLA/KIR
+inference to an external backend. Native alignment I/O and empirical calibration
+are planned. verify checks metadata consistency, not biological accuracy or
+correspondence between the Rust implementation and Lean research models.
 "#
     );
 }

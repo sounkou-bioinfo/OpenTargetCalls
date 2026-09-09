@@ -37,20 +37,21 @@ jobs:
       - name: Build release
         run: cargo build --release
 
-      - name: Exercise registry and HBA certificate
+      - name: Exercise registry and HBA decision record
         shell: bash
         run: |
-          target/release/phase-tools targets --assay wes --validated-enrichment
-          target/release/phase-tools hba \
+          target/release/opentargetcalls targets --assay wes --validated-enrichment
+          target/release/opentargetcalls hba \
             --assay wgs \
             --evidence examples/hba/evidence.synthetic.tsv \
             --hypotheses examples/hba/hypotheses.synthetic.tsv \
             --min-margin 10 \
             --certificate "${RUNNER_TEMP}/hba.cert"
-          target/release/phase-tools verify --certificate "${RUNNER_TEMP}/hba.cert"
+          grep -qx 'schema=opentargetcalls-certificate-v1' "${RUNNER_TEMP}/hba.cert"
+          target/release/opentargetcalls verify --certificate "${RUNNER_TEMP}/hba.cert"
 
   lean:
-    name: Lean certificate proofs
+    name: Lean research models
     runs-on: ubuntu-latest
 
     steps:
@@ -63,8 +64,8 @@ jobs:
           test: false
           lint: false
           leanchecker: true
-          leanchecker-args: PhaseTools
+          leanchecker-args: OpenTargetCalls
           axiom-audit: true
-          axiom-audit-root: PhaseTools
+          axiom-audit-root: OpenTargetCalls
           use-github-cache: false
           use-mathlib-cache: false

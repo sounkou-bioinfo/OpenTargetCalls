@@ -1,4 +1,4 @@
-namespace PhaseTools
+namespace OpenTargetCalls
 
 inductive Target where
   | hla
@@ -143,4 +143,4 @@ theorem kir_wes_observable :
     observable .kir .wes false = true := by
   rfl
 
-end PhaseTools
+end OpenTargetCalls

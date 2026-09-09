@@ -3,7 +3,8 @@
 ## Certificate format
 
 The CLI calls these artifacts certificates. They are canonical `key=value`
-decision records. Version 1 records:
+decision records. The schema is `opentargetcalls-certificate-v1`, with model
+descriptor `OpenTargetCalls.Certificate.V2`. Version 1 records:
 
 - target and assay declaration;
 - target-enrichment declaration;
@@ -53,9 +54,9 @@ errors. They are deliberately not encoded as biological no-call reasons.
 
 ## Lean project
 
-The proof root is `PhaseTools.lean`.
+The proof root is `OpenTargetCalls.lean`.
 
-`PhaseTools.Registry` proves:
+`OpenTargetCalls.Registry` proves:
 
 - every target constructor occurs in the closed registry list;
 - every DRAGEN v4.5 targeted-caller target is inside that registry;
@@ -64,7 +65,7 @@ The proof root is `PhaseTools.lean`.
 - Unum is registered only for HLA and KIR;
 - WGS observability and the HBA/SMN enrichment transition.
 
-`PhaseTools.Certificate` defines the same target, assay, backend,
+`OpenTargetCalls.Certificate` defines the same target, assay, backend,
 implementation, call-cardinality, and no-call-reason invariant as the Rust
 verifier. It proves that successful verification implies:
 
@@ -75,7 +76,7 @@ verifier. It proves that successful verification implies:
 - an HBA selection winner is in range and satisfies the requested margin.
 
 CI builds with warnings as errors, runs Lean's environment checker, and audits
-the compiled `PhaseTools` namespace for axioms outside the standard allowlist.
+the compiled `OpenTargetCalls` namespace for axioms outside the standard allowlist.
 The audit catches `sorry`, `admit`, `native_decide`, and home-rolled axioms.
 
 ## Trusted computing base
